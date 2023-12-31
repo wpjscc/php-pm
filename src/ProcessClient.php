@@ -31,7 +31,7 @@ class ProcessClient
         $connector = new UnixConnector($this->loop);
         $unixSocket = $this->getControllerSocketPath(false);
 
-        $connector->connect($unixSocket)->done(
+        $connector->connect($unixSocket)->then(
             function (ConnectionInterface $connection) use ($data, $callback) {
                 $result = '';
 
