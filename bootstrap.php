@@ -1,19 +1,17 @@
 <?php
 
-use React\EventLoop\Loop;
+$app = new \FrameworkX\App();
 
-if (class_exists(\PHPPM\ProcessSlave::class)) {
-    $socket = \PHPPM\ProcessSlave::$slave;
-} else {
-    // todo socket
-}
-
-$http = new \React\Http\HttpServer(function (\Psr\Http\Message\ServerRequestInterface $request) {
+$app->get('/', function () {
     return \React\Http\Message\Response::plaintext(
-        "Hello World!\n"
+        "Hello wörld!\n"
     );
 });
 
-$http->listen($socket);
+$app->get('/users/{name}', function (\Psr\Http\Message\ServerRequestInterface $request) {
+    return \React\Http\Message\Response::plaintext(
+        "Hello " . $request->getAttribute('name') . "!\n"
+    );
+});
 
-Loop::get()->run();
+$app->run();
