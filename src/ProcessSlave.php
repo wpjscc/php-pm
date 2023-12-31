@@ -308,7 +308,7 @@ class ProcessSlave implements ServerInterface
         $connector = new UnixConnector($this->loop);
         $unixSocket = $this->getControllerSocketPath(false);
 
-        $connector->connect($unixSocket)->done(
+        $connector->connect($unixSocket)->then(
             function ($controller) {
                 $this->controller = $controller;
 
