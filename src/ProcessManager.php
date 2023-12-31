@@ -3,10 +3,10 @@ declare(ticks = 1);
 
 namespace PHPPM;
 
-use React\EventLoop\Factory;
+use React\EventLoop\Loop;
 use React\EventLoop\LoopInterface;
 use React\EventLoop\TimerInterface;
-use React\Socket\Server;
+use React\Socket\SocketServer;
 use React\Socket\UnixServer;
 use React\Socket\ServerInterface;
 use React\Socket\ConnectionInterface;
@@ -528,9 +528,9 @@ class ProcessManager
         \ini_set('implicit_flush', 1);
         \ob_implicit_flush(1);
 
-        $this->loop = Factory::create();
+        $this->loop = Loop::get();
 
-        $this->web = new Server(\sprintf('%s:%d', $this->host, $this->port), $this->loop, ['backlog' => self::TCP_BACKLOG]);
+        $this->web = new SocketServer(\sprintf('%s:%d', $this->host, $this->port), ['backlog' => self::TCP_BACKLOG], $this->loop);
         $this->web->on('connection', [$this, 'onRequest']);
 
         $this->controller = new UnixServer($this->getControllerSocketPath(), $this->loop);
@@ -1268,6 +1268,15 @@ if (!pcntl_enabled()) {
 //global for all global functions
 ProcessSlave::\$slave = new ProcessSlave($socketpath, $bridge, $bootstrap, $config);
 ProcessSlave::\$slave->run();
+if(file_exists($dir . '/bootstrap.php')) {
+    require_once $dir . '/bootstrap.php';
+} elseif(file_exists($dir . '/public/bootstrap.php')){
+    require_once $dir . '/public/bootstrap.php';
+} elseif(file_exists($dir . '/../../../bootstrap.php')){
+    require_once $dir . '/../../../bootstrap.php';
+} elseif(file_exists($dir . '/../../../public/bootstrap.php')){
+    require_once $dir . '/../../../public/bootstrap.php';
+}
 EOF;
 
         // slave php file

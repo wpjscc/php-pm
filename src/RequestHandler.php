@@ -156,6 +156,17 @@ class RequestHandler
             }
         }
 
+        $busyIng = $this->slaves->getByStatus(Slave::BUSY);
+        if (\count($busyIng)) {
+            // pick first slave
+            $slave = $busyIng[\array_rand($busyIng)];
+
+            // slave available -> connect
+            if ($this->tryOccupySlave($slave)) {
+                return;
+            }
+        }
+
         // keep retrying until slave becomes available, unless timeout has been exceeded
         if (\time() < ($this->requestSentAt + $this->timeout)) {
             // add a small delay to avoid busy waiting

@@ -55,6 +55,14 @@ class Slave
      */
     private $maxRequests = 0;
 
+
+    /**
+     * current number of requests a slave handling
+     *
+     * @var int
+     */
+    private $currentRequests = 0;
+
     /**
      * Maximum amount of memory the slave can consume
      *
@@ -152,9 +160,16 @@ class Slave
      */
     public function occupy()
     {
+        if ($this->status === self::BUSY && $this->currentRequests > 0) {
+            $this->currentRequests++;
+            return;
+        }
+
         if ($this->status !== self::READY) {
             throw new \LogicException('Cannot occupy a slave that is not in ready state');
         }
+
+        $this->currentRequests++;
 
         $this->status = self::BUSY;
     }
@@ -166,11 +181,16 @@ class Slave
      */
     public function release()
     {
+
         if ($this->status !== self::BUSY) {
             throw new \LogicException('Cannot release a slave that is not in busy state');
         }
 
-        $this->status = self::READY;
+        $this->currentRequests = \max(0, $this->currentRequests - 1);
+        if ($this->currentRequests === 0) {
+            $this->status = self::READY;
+        }
+
         $this->handledRequests++;
     }
 

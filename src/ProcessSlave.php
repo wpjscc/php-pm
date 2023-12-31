@@ -7,7 +7,7 @@ use Evenement\EventEmitterInterface;
 use PHPPM\Bridges\BridgeInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
-use React\EventLoop\Factory;
+use React\EventLoop\Loop;
 use React\EventLoop\LoopInterface;
 use React\Http\Message\Response;
 use React\Http\Server as HttpServer;
@@ -23,10 +23,12 @@ use React\Socket\UnixServer;
 use React\Stream\ReadableResourceStream;
 use Symfony\Component\ErrorHandler\BufferingLogger;
 use Symfony\Component\ErrorHandler\ErrorHandler;
+use React\Stream\Util;
 
-class ProcessSlave
+class ProcessSlave implements ServerInterface
 {
     use ProcessCommunicationTrait;
+    use \Evenement\EventEmitterTrait;
 
     /**
      * Current instance, used by global functions.
@@ -321,30 +323,56 @@ class ProcessSlave
                 $port = $this->config['port'];
                 $socketPath = $this->getSlaveSocketPath($port, true);
                 $this->server = new UnixServer($socketPath, $this->loop);
+                Util::forwardEvents($this->server, $this, ['connection']);
+                // if ($this->config['limit-concurrent-requests'] != null || $this->config['request-body-buffer'] != null) {
+                //     $httpServer = new HttpServer(
+                //         $this->loop,
+                //         new StreamingRequestMiddleware(),
+                //         new LimitConcurrentRequestsMiddleware($this->config['limit-concurrent-requests'] ?? 1024),
+                //         new RequestBodyBufferMiddleware($this->config['request-body-buffer'] ?? 65536),
+                //         new RequestBodyParserMiddleware(),
+                //         [$this, 'onRequest']
+                //     );
+                // } else {
+                //     $httpServer = new HttpServer($this->loop, [$this, 'onRequest']);
+                // }
 
-                if ($this->config['limit-concurrent-requests'] != null || $this->config['request-body-buffer'] != null) {
-                    $httpServer = new HttpServer(
-                        $this->loop,
-                        new StreamingRequestMiddleware(),
-                        new LimitConcurrentRequestsMiddleware($this->config['limit-concurrent-requests'] ?? 1024),
-                        new RequestBodyBufferMiddleware($this->config['request-body-buffer'] ?? 65536),
-                        new RequestBodyParserMiddleware(),
-                        [$this, 'onRequest']
-                    );
-                } else {
-                    $httpServer = new HttpServer($this->loop, [$this, 'onRequest']);
-                }
-
-                $httpServer->listen($this->server);
-                if ($this->isLogging()) {
-                    $httpServer->on('error', function (\Exception $e) {
-                        \error_log(\sprintf('Worker error while processing the request. %s: %s', \get_class($e), $e->getMessage()));
-                    });
-                }
+                // $httpServer->listen($this->server);
+                // if ($this->isLogging()) {
+                //     $httpServer->on('error', function (\Exception $e) {
+                //         \error_log(\sprintf('Worker error while processing the request. %s: %s', \get_class($e), $e->getMessage()));
+                //     });
+                // }
 
                 $this->sendMessage($this->controller, 'register', ['pid' => \getmypid(), 'port' => $port]);
             }
         );
+    }
+
+    public function getAddress()
+    {
+        return $this->server ? $this->server->getAddress() : null;
+    }
+
+    public function pause()
+    {
+        if ($this->server) {
+            $this->server->pause();
+        }
+    }
+
+    public function resume()
+    {
+        if ($this->server) {
+            $this->server->resume();
+        }
+    }
+
+    public function close()
+    {
+        if ($this->server) {
+            $this->server->close();
+        }
     }
 
     /**
@@ -368,13 +396,13 @@ class ProcessSlave
      */
     public function run()
     {
-        $this->loop = Factory::create();
+        $this->loop = Loop::get();
 
         $this->errorLogger = new BufferingLogger();
         ErrorHandler::register(new ErrorHandler($this->errorLogger));
 
         $this->tryConnect();
-        $this->loop->run();
+        //$this->loop->run();
     }
 
     public function commandBootstrap(array $data, ConnectionInterface $conn)
