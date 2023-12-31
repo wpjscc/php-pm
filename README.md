@@ -2,7 +2,7 @@ PPM - PHP Process Manager
 ====================================================
 
 ```
-./bin/ppm start --cgi-path=/usr/bin/php --port=8011 --bridge=ReactphpBridge --host=0.0.0.0 --debug=1 --logging=1 --max-requests=99999999999
+./bin/ppm start --cgi-path=/usr/bin/php --port=8011 --bridge=ReactphpBridge --host=0.0.0.0 --debug=1 --logging=1 --max-requests=99999999999 -vvv
 ```
 
 <p align="center">
